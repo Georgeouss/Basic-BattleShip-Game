@@ -244,6 +244,10 @@ class Game {
 
             }
         }
+        else if(this.board.getBoard()[_row][col] == 'x')
+        {
+            System.out.println("Already hit!") ;
+        }
         else
         {
             System.out.println("Miss!");
