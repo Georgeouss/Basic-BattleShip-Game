@@ -105,20 +105,26 @@ class Ship
 class Board
 {
     private char[][] board;
-    public Board()
+    private int size ;
+    public Board(int _size)
     {
-        this.board = new char[7][7] ;
-        for(int i = 0; i<7 ;i++)
-            for (int j = 0 ; j < 7 ; j++)
+        this.size = _size;
+        this.board = new char[this.size][this.size] ;
+        for(int i = 0; i<this.size ;i++)
+            for (int j = 0 ; j < this.size ; j++)
                 this.board[i][j] = '.' ;
     }
     public void printBoard(){
-        for(int i = 0; i<7 ;i++) {
-            for (int j = 0; j < 7; j++) {
+        for(int i = 0; i<this.size ;i++) {
+            for (int j = 0; j < this.size; j++) {
                 System.out.print(this.board[i][j] + "  ");
             }
             System.out.println();
         }
+    }
+
+    public int getSize() {
+        return size;
     }
 
     public char[][] getBoard() {
@@ -127,6 +133,7 @@ class Board
 
     protected void makeChange(int row, int col, char symbol)
     {
+        if(row < this.size && col < this.size)
         this.board[row][col]= symbol ;
     }
 
@@ -138,6 +145,21 @@ class Game {
     private Ship[] ships ;
     private Board board ;
     private Board hitBoard;
+    private char hitShip;
+    private char placedShip;
+    private char missedShot ;
+
+    protected enum wayToPlace {
+        HORIZONTAL, VERTICAL;
+
+        private static final wayToPlace[] VALUES = values();
+        private static final int SIZE = VALUES.length;
+        private static final Random RANDOM = new Random();
+
+        public static wayToPlace getRandomWay() {
+            return VALUES[RANDOM.nextInt(SIZE)];
+        }
+        }
 
 
     protected boolean isValidPlace(Position start,Position end)
@@ -146,7 +168,7 @@ class Game {
         {
             for(int i = start.getCol() ; i < end.getCol() ;i++)
             {
-                if(board.getBoard()[start.getRow()][i] == 'o')
+                if(board.getBoard()[start.getRow()][i] == this.placedShip)
                 {
                     return false ;
                 }
@@ -156,7 +178,7 @@ class Game {
         {
             for(int i = start.getRow() ; i < end.getRow() ;i++)
             {
-                if(board.getBoard()[i][start.getCol()] == 'o')
+                if(board.getBoard()[i][start.getCol()] == this.placedShip)
                 {
                     return false ;
                 }
@@ -169,10 +191,13 @@ class Game {
 
     public Game()
     {
-        this.hitBoard = new Board();
-        this.board= new Board();
+        this.hitBoard = new Board(10);
+        this.board= new Board(10);
         this.shipSize = 3 ;
         this.ships = new Ship[shipSize];
+        this.hitShip = 'x';
+        this.placedShip = '0' ;
+        this.missedShot = '-' ;
     }
 
     public void startGame()
@@ -184,24 +209,25 @@ class Game {
             int row = 0 ;
             int col = 0;
 
-            Random randChoice = new Random();
-            int choice = randChoice.nextInt(2);
-            if(choice == 0) {
+
+            wayToPlace way = wayToPlace.getRandomWay();
+
+            if(way==wayToPlace.VERTICAL) {
 
                 Random randRow2 = new Random();
                 Random randCol = new Random();
                 do {
-                    row = randRow2.nextInt(7 - this.ships[i].getLives());
+                    row = randRow2.nextInt(this.board.getSize() - this.ships[i].getLives());
 
-                    col = randCol.nextInt(7);
+                    col = randCol.nextInt(this.board.getSize());
                     this.ships[i].setStartingPosition(row, col);
                     this.ships[i].setEndPosition(row + this.ships[i].getLives(), col);
                 }while(!this.isValidPlace(this.ships[i].getStartingPosition(),this.ships[i].getEndPosition()));
                 for (int k = 0; k < this.ships[i].getLives(); k++) {
-                    this.board.makeChange(row + k, col, 'o');
+                    this.board.makeChange(row + k, col,this.placedShip);
                 }
             }
-            else {
+            else if(way==wayToPlace.VERTICAL){
 
                 Random randCol2 = new Random();
                 Random randRow = new Random();
@@ -214,7 +240,7 @@ class Game {
                     this.ships[i].setEndPosition(row, col + this.ships[i].getLives());
                 }while(!this.isValidPlace(this.ships[i].getStartingPosition(),this.ships[i].getEndPosition()));
                 for (int k = 0; k < this.ships[i].getLives(); k++) {
-                    this.board.makeChange(row, col + k, 'o');
+                    this.board.makeChange(row, col + k,this.placedShip);
                 }
             }
 
@@ -226,11 +252,11 @@ class Game {
     public void playerAttack(char row,int col)
     {
         int _row = (int) row - (int)'a';
-        if(this.board.getBoard()[_row][col] == 'o')
+        if(this.board.getBoard()[_row][col] == this.placedShip)
         {
             System.out.println("Hit !");
-            this.board.makeChange(_row,col,'x');
-            this.hitBoard.makeChange(_row,col,'x');
+            this.board.makeChange(_row,col , this.hitShip);
+            this.hitBoard.makeChange(_row,col , this.hitShip);
             for(int i = 0 ; i < this.shipSize ;i++)
             {
                 if(this.ships[i].isHit(new Position(_row,col)))
@@ -244,15 +270,15 @@ class Game {
 
             }
         }
-        else if(this.board.getBoard()[_row][col] == 'x')
+        else if(this.board.getBoard()[_row][col] == this.hitShip)
         {
             System.out.println("Already hit!") ;
         }
         else
         {
             System.out.println("Miss!");
-            this.board.makeChange(_row,col,'-');
-            this.hitBoard.makeChange(_row,col,'-');
+            this.board.makeChange(_row,col,this.missedShot);
+            this.hitBoard.makeChange(_row,col , this.missedShot);
         }
     }
     public boolean isOver()
@@ -263,10 +289,10 @@ class Game {
     public Board getHitBoard() {
         return hitBoard;
     }
-/*
+
     public Board getBoard() {
         return board;
-    }*/
+    }
 }
 
 
@@ -278,8 +304,8 @@ public class Main {
         game1.startGame();
         while(!game1.isOver())
         {
-            //game1.getBoard().printBoard();
-            game1.getHitBoard().printBoard();
+            game1.getBoard().printBoard();
+            //game1.getHitBoard().printBoard();
             Scanner sym = new Scanner(System.in);
             Scanner num = new Scanner(System.in);
             game1.playerAttack(sym.next().charAt(0),num.nextInt());
